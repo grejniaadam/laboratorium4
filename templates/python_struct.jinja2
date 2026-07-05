@@ -1,0 +1,153 @@
+"""
+Auto-generated serializers template (Jinja2)
+"""
+from __future__ import annotations
+import struct
+
+_buf_parts = []
+
+def _write_uint8(v):
+    return struct.pack('<B', v)
+
+def _read_uint8(b, offset):
+    return struct.unpack_from('<B', b, offset)[0], offset+1
+
+def _write_int32(v):
+    return struct.pack('<i', v)
+
+def _read_int32(b, offset):
+    return struct.unpack_from('<i', b, offset)[0], offset+4
+
+def _write_uint32(v):
+    return struct.pack('<I', v)
+
+def _read_uint32(b, offset):
+    return struct.unpack_from('<I', b, offset)[0], offset+4
+
+def _write_float64(v):
+    return struct.pack('<d', v)
+
+def _read_float64(b, offset):
+    return struct.unpack_from('<d', b, offset)[0], offset+8
+
+def _write_string(s: str):
+    data = s.encode('utf-8')
+    return _write_uint32(len(data)) + data
+
+def _read_string(b, offset):
+    length, offset = _read_uint32(b, offset)
+    s = b[offset:offset+length].decode('utf-8')
+    return s, offset+length
+
+def _write_array(items_bytes_list):
+    # items_bytes_list: list of bytes for each item
+    out = _write_uint32(len(items_bytes_list))
+    for it in items_bytes_list:
+        out += it
+    return out
+
+def _read_array(b, offset, item_reader):
+    length, offset = _read_uint32(b, offset)
+    items = []
+    for _ in range(length):
+        item, offset = item_reader(b, offset)
+        items.append(item)
+    return items, offset
+
+{% for t in types %}
+class {{ t.name }}:
+    def __init__(self{% for f in t.fields %}, {{ f.name }}: {{ 'int' if f.type in ['int32','uint8','uint32'] else 'float' if f.type=='float64' else 'str' if f.type=='string' else f.type }} = None{% endfor %}):
+        {% for f in t.fields %}
+        self.{{ f.name }} = {{ f.name }}
+        {% endfor %}
+
+    def serialize(self) -> bytes:
+        parts = []
+        {% for f in t.fields %}
+        {% if f.type == 'int32' %}
+        parts.append(_write_int32(self.{{ f.name }} or 0))
+        {% elif f.type == 'uint8' %}
+        parts.append(_write_uint8(self.{{ f.name }} or 0))
+        {% elif f.type == 'uint32' %}
+        parts.append(_write_uint32(self.{{ f.name }} or 0))
+        {% elif f.type == 'float64' %}
+        parts.append(_write_float64(self.{{ f.name }} or 0.0))
+        {% elif f.type == 'string' %}
+        parts.append(_write_string(self.{{ f.name }} or ''))
+        {% else %}
+        # assume user-defined struct or array
+        {% if f.type.endswith('[]') %}
+        # array of {{ f.type[:-2] }}
+        arr = self.{{ f.name }} or []
+        item_bytes = []
+        for it in arr:
+            {% if f.type[:-2] in primitive_types %}
+            # primitive array
+            {% if f.type[:-2] == 'int32' %}
+            item_bytes.append(_write_int32(it or 0))
+            {% elif f.type[:-2] == 'uint8' %}
+            item_bytes.append(_write_uint8(it or 0))
+            {% elif f.type[:-2] == 'uint32' %}
+            item_bytes.append(_write_uint32(it or 0))
+            {% elif f.type[:-2] == 'float64' %}
+            item_bytes.append(_write_float64(it or 0.0))
+            {% elif f.type[:-2] == 'string' %}
+            item_bytes.append(_write_string(it or ''))
+            {% endif %}
+            {% else %}
+            item_bytes.append(it.serialize())
+            {% endif %}
+        parts.append(_write_array(item_bytes))
+        {% else %}
+        # nested struct
+        parts.append(self.{{ f.name }}.serialize() if self.{{ f.name }} is not None else b'')
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+        return b''.join(parts)
+
+    @classmethod
+    def deserialize(cls, b: bytes, offset: int = 0):
+        obj = cls()
+        {% for f in t.fields %}
+        {% if f.type == 'int32' %}
+        obj.{{ f.name }}, offset = _read_int32(b, offset)
+        {% elif f.type == 'uint8' %}
+        obj.{{ f.name }}, offset = _read_uint8(b, offset)
+        {% elif f.type == 'uint32' %}
+        obj.{{ f.name }}, offset = _read_uint32(b, offset)
+        {% elif f.type == 'float64' %}
+        obj.{{ f.name }}, offset = _read_float64(b, offset)
+        {% elif f.type == 'string' %}
+        obj.{{ f.name }}, offset = _read_string(b, offset)
+        {% else %}
+        {% if f.type.endswith('[]') %}
+        # array of {{ f.type[:-2] }}
+        {% if f.type[:-2] in primitive_types %}
+        def _item_reader(b2, off2):
+            {% if f.type[:-2] == 'int32' %}
+            return _read_int32(b2, off2)
+            {% elif f.type[:-2] == 'uint8' %}
+            return _read_uint8(b2, off2)
+            {% elif f.type[:-2] == 'uint32' %}
+            return _read_uint32(b2, off2)
+            {% elif f.type[:-2] == 'float64' %}
+            return _read_float64(b2, off2)
+            {% elif f.type[:-2] == 'string' %}
+            return _read_string(b2, off2)
+            {% endif %}
+        obj.{{ f.name }}, offset = _read_array(b, offset, _item_reader)
+        {% else %}
+        # array of structs
+        def _item_reader(b2, off2):
+            return {{ f.type[:-2] }}.deserialize(b2, off2)
+        obj.{{ f.name }}, offset = _read_array(b, offset, _item_reader)
+        {% endif %}
+        {% else %}
+        # nested struct
+        obj.{{ f.name }}, offset = {{ f.type }}.deserialize(b, offset)
+        {% endif %}
+        {% endfor %}
+        return obj, offset
+
+{% endfor %}

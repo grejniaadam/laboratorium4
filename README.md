@@ -11,6 +11,7 @@ Ten projekt pokazuje, jak zdefiniować strukturę danych w pliku JSON, a następ
 - zawiera przykładowy serwer i klient TCP/IP komunikujące się za pomocą wygenerowanej implementacji
 - zawiera prosty test integracyjny
 - zawiera nową symulację „czujnik -> odbiornik” z typem `SensorPacket`
+- zawiera nową aplikację GUI pod temat transferu Juliana Álvareza do Barcelony z wykresem w czasie rzeczywistym
 
 ## Struktura projektu
 
@@ -21,6 +22,8 @@ Ten projekt pokazuje, jak zdefiniować strukturę danych w pliku JSON, a następ
 - `server.py` — przykładowy serwer TCP/IP
 - `client.py` — przykładowy klient TCP/IP
 - `sensor_simulation.py` — symulacja wysyłania danych z czujnika do odbiornika
+- `gui_sender_receiver.py` — graficzna aplikacja z dashboardem transferu Juliana Álvareza
+- `sensor_gui.py` — moduł wysyłający dane z GUI do serwera
 - `test.py` — test integracyjny
 - `requirements.txt` — zależności projektu
 
@@ -59,6 +62,14 @@ python sensor_simulation.py
 ```
 
 Uwaga: najpierw uruchom serwer (`python server.py`), a dopiero potem skrypt symulacji.
+
+### 6. Uruchom GUI transferowe
+
+```powershell
+python gui_sender_receiver.py
+```
+
+To uruchomi dashboard z aktualną wartością szans Juliana Álvareza na transfer do Barcelony oraz wykresem w czasie rzeczywistym.
 
 ## Jak dodać nowy typ danych
 

@@ -133,3 +133,26 @@ class Order:
         obj.quantity, offset = _read_uint8(b, offset)
         obj.notes, offset = _read_string(b, offset)
         return obj, offset
+class SensorPacket:
+    def __init__(self, sender: str = None, receiver: str = None, value: float = None, unit: str = None):
+        self.sender = sender
+        self.receiver = receiver
+        self.value = value
+        self.unit = unit
+
+    def serialize(self) -> bytes:
+        parts = []
+        parts.append(_write_string(self.sender or ''))
+        parts.append(_write_string(self.receiver or ''))
+        parts.append(_write_float64(self.value or 0.0))
+        parts.append(_write_string(self.unit or ''))
+        return b''.join(parts)
+
+    @classmethod
+    def deserialize(cls, b: bytes, offset: int = 0):
+        obj = cls()
+        obj.sender, offset = _read_string(b, offset)
+        obj.receiver, offset = _read_string(b, offset)
+        obj.value, offset = _read_float64(b, offset)
+        obj.unit, offset = _read_string(b, offset)
+        return obj, offset

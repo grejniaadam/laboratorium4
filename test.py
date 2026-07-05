@@ -6,7 +6,9 @@ import subprocess
 import time
 import socket
 import sys
+import threading
 from generated.serializers import Message, Person, Product, Order
+from sensor_gui import send_sensor_packet
 
 def test_person_serialization():
     """Test Person serialization/deserialization."""
@@ -94,6 +96,21 @@ def test_tcp_communication():
         server_proc.terminate()
         server_proc.wait()
 
+
+def test_sensor_gui_send():
+    """Test sending a SensorPacket via GUI helper."""
+    server_proc = subprocess.Popen([sys.executable, "server.py"])
+    time.sleep(1)
+    try:
+        reply = send_sensor_packet('sensor-gui', 'receiver-gui', 88.8, 'C')
+        assert reply is not None
+        assert reply.sender == 'receiver-gui'
+        assert reply.receiver == 'sensor-gui'
+        print("✓ Sensor GUI send test passed")
+    finally:
+        server_proc.terminate()
+        server_proc.wait()
+
 if __name__ == "__main__":
     print("Running integration tests...\n")
     try:
@@ -102,6 +119,7 @@ if __name__ == "__main__":
         test_order_serialization()
         test_message_serialization()
         test_tcp_communication()
+        test_sensor_gui_send()
         print("\n✓ All tests passed!")
         sys.exit(0)
     except Exception as e:

@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import random
+import socket
 
 
 class SensorApp(tk.Tk):
@@ -13,6 +14,7 @@ class SensorApp(tk.Tk):
 
         self.current_probability = 4.8
         self.history = [4.8] * 30
+        self.server_online = False
         self.create_widgets()
         self.update_sensor()
 
@@ -41,31 +43,46 @@ class SensorApp(tk.Tk):
         self.log.insert('end', '⚡ Real-time sensor started...\n')
 
     def update_sensor(self):
-        drift = random.uniform(-0.8, 0.8)
-        if random.random() < 0.2:
-            drift += random.choice([-2.0, 2.0])
-        self.current_probability = max(0.0, min(15.0, self.current_probability + drift))
-        self.history.append(self.current_probability)
-        if len(self.history) > 40:
-            self.history.pop(0)
+        self.server_online = self.check_server()
+        if self.server_online:
+            drift = random.uniform(-0.4, 0.4)
+            if random.random() < 0.15:
+                drift += random.choice([-1.0, 1.0])
+            self.current_probability = max(0.0, min(15.0, self.current_probability + drift))
+            self.history.append(self.current_probability)
+            if len(self.history) > 40:
+                self.history.pop(0)
 
-        if self.current_probability >= 12.0:
-            status = 'Signal: strong Barcelona interest'
-        elif self.current_probability >= 8.0:
-            status = 'Signal: growing momentum'
-        elif self.current_probability >= 4.0:
-            status = 'Signal: moderate chance'
+            if self.current_probability >= 12.0:
+                status = 'Signal: strong Barcelona interest'
+            elif self.current_probability >= 8.0:
+                status = 'Signal: growing momentum'
+            elif self.current_probability >= 4.0:
+                status = 'Signal: moderate chance'
+            else:
+                status = 'Signal: quiet market'
+
+            self.prob_var.set(f'{self.current_probability:.1f}%')
+            self.status_var.set(status)
+            self.draw_chart()
+            self.log.insert('end', f'[{len(self.history)}] Chance updated: {self.current_probability:.1f}%\n')
         else:
-            status = 'Signal: quiet market'
+            self.prob_var.set('offline')
+            self.status_var.set('Signal: server offline — no live data')
+            self.draw_chart(offline=True)
+            self.log.insert('end', '[offline] Server is not available.\n')
 
-        self.prob_var.set(f'{self.current_probability:.1f}%')
-        self.status_var.set(status)
-        self.draw_chart()
-        self.log.insert('end', f'[{len(self.history)}] Chance updated: {self.current_probability:.1f}%\n')
         self.log.see('end')
         self.after(1000, self.update_sensor)
 
-    def draw_chart(self):
+    def check_server(self):
+        try:
+            with socket.create_connection(('127.0.0.1', 9999), timeout=0.3):
+                return True
+        except OSError:
+            return False
+
+    def draw_chart(self, offline=False):
         self.canvas.delete('all')
         w, h = 740, 260
         margin_left, margin_right = 40, 20
@@ -79,6 +96,10 @@ class SensorApp(tk.Tk):
         self.canvas.create_text(margin_left - 8, margin_top, text='15%', anchor='e', fill='#ffcf4d')
         self.canvas.create_text(margin_left - 8, h - margin_bottom, text='0%', anchor='e', fill='#ffcf4d')
         self.canvas.create_text(w // 2, h - 5, text='time', fill='#9dd8ff')
+
+        if offline:
+            self.canvas.create_text(w // 2, h // 2, text='Offline mode', fill='#ff4fd8', font=('Segoe UI', 16, 'bold'))
+            return
 
         if len(self.history) < 2:
             return

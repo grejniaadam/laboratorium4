@@ -56,6 +56,27 @@ def test_message_serialization():
     assert msg2.text == "Hello World"
     print("✓ Message serialization test passed")
 
+def test_server_stays_alive_for_multiple_connections():
+    """Test that the server keeps accepting new connections after the first one."""
+    server_proc = subprocess.Popen([sys.executable, "server.py"])
+    time.sleep(1)
+    try:
+        payload = Message(sender=Person(id=7, name="Alice", age=27), text="First ping").serialize()
+        with socket.create_connection(("127.0.0.1", 9999), timeout=1) as s:
+            s.sendall(struct.pack('<I', len(payload)) + payload)
+            data = s.recv(4)
+            assert len(data) == 4
+
+        payload = Message(sender=Person(id=8, name="Bob", age=31), text="Second ping").serialize()
+        with socket.create_connection(("127.0.0.1", 9999), timeout=1) as s:
+            s.sendall(struct.pack('<I', len(payload)) + payload)
+            data = s.recv(4)
+            assert len(data) == 4
+    finally:
+        server_proc.terminate()
+        server_proc.wait()
+
+
 def test_tcp_communication():
     """Test TCP server/client communication."""
     import struct

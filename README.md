@@ -10,6 +10,7 @@ Ten projekt pokazuje, jak zdefiniować strukturę danych w pliku JSON, a następ
 - obsługuje typy złożone (np. obiekty zagnieżdżone)
 - zawiera przykładowy serwer i klient TCP/IP komunikujące się za pomocą wygenerowanej implementacji
 - zawiera prosty test integracyjny
+- zawiera nową symulację „czujnik -> odbiornik” z typem `SensorPacket`
 
 ## Struktura projektu
 
@@ -19,13 +20,14 @@ Ten projekt pokazuje, jak zdefiniować strukturę danych w pliku JSON, a następ
 - `generated/serializers.py` — wygenerowany kod serializatorów
 - `server.py` — przykładowy serwer TCP/IP
 - `client.py` — przykładowy klient TCP/IP
+- `sensor_simulation.py` — symulacja wysyłania danych z czujnika do odbiornika
 - `test.py` — test integracyjny
 - `requirements.txt` — zależności projektu
 
 ## Jak uruchomić
 
 ### 1. Utwórz środowisko wirtualne
-
+       
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
@@ -50,6 +52,14 @@ python server.py
 python client.py
 ```
 
+### 5. Uruchom symulację czujnika
+
+```powershell
+python sensor_simulation.py
+```
+
+Uwaga: najpierw uruchom serwer (`python server.py`), a dopiero potem skrypt symulacji.
+
 ## Jak dodać nowy typ danych
 
 Edytuj plik `interface.json` i dodaj nowy typ w sekcji `types`.
@@ -65,6 +75,15 @@ Przykład:
         {"name": "sku", "type": "uint32"},
         {"name": "title", "type": "string"},
         {"name": "price", "type": "float64"}
+      ]
+    },
+    {
+      "name": "SensorPacket",
+      "fields": [
+        {"name": "sender", "type": "string"},
+        {"name": "receiver", "type": "string"},
+        {"name": "value", "type": "float64"},
+        {"name": "unit", "type": "string"}
       ]
     }
   ]

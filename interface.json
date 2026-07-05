@@ -31,6 +31,15 @@
         {"name": "quantity", "type": "uint8"},
         {"name": "notes", "type": "string"}
       ]
+    },
+    {
+      "name": "SensorPacket",
+      "fields": [
+        {"name": "sender", "type": "string"},
+        {"name": "receiver", "type": "string"},
+        {"name": "value", "type": "float64"},
+        {"name": "unit", "type": "string"}
+      ]
     }
   ]
 }

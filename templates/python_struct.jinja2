@@ -53,101 +53,83 @@ def _read_array(b, offset, item_reader):
         item, offset = item_reader(b, offset)
         items.append(item)
     return items, offset
-
-{% for t in types %}
+{%- for t in types %}
 class {{ t.name }}:
-    def __init__(self{% for f in t.fields %}, {{ f.name }}: {{ 'int' if f.type in ['int32','uint8','uint32'] else 'float' if f.type=='float64' else 'str' if f.type=='string' else f.type }} = None{% endfor %}):
-        {% for f in t.fields %}
+    def __init__(self{%- for f in t.fields %}, {{ f.name }}: {{ 'int' if f.type in ['int32','uint8','uint32'] else 'float' if f.type=='float64' else 'str' if f.type=='string' else f.type }} = None{%- endfor %}):
+        {%- for f in t.fields %}
         self.{{ f.name }} = {{ f.name }}
-        {% endfor %}
+        {%- endfor %}
 
     def serialize(self) -> bytes:
         parts = []
-        {% for f in t.fields %}
-        {% if f.type == 'int32' %}
+        {%- for f in t.fields %}
+        {%- if f.type in primitive_types %}
+        {%- if f.type == 'int32' %}
         parts.append(_write_int32(self.{{ f.name }} or 0))
-        {% elif f.type == 'uint8' %}
+        {%- elif f.type == 'uint8' %}
         parts.append(_write_uint8(self.{{ f.name }} or 0))
-        {% elif f.type == 'uint32' %}
+        {%- elif f.type == 'uint32' %}
         parts.append(_write_uint32(self.{{ f.name }} or 0))
-        {% elif f.type == 'float64' %}
+        {%- elif f.type == 'float64' %}
         parts.append(_write_float64(self.{{ f.name }} or 0.0))
-        {% elif f.type == 'string' %}
+        {%- elif f.type == 'string' %}
         parts.append(_write_string(self.{{ f.name }} or ''))
-        {% else %}
-        # assume user-defined struct or array
-        {% if f.type.endswith('[]') %}
-        # array of {{ f.type[:-2] }}
-        arr = self.{{ f.name }} or []
-        item_bytes = []
-        for it in arr:
-            {% if f.type[:-2] in primitive_types %}
-            # primitive array
-            {% if f.type[:-2] == 'int32' %}
-            item_bytes.append(_write_int32(it or 0))
-            {% elif f.type[:-2] == 'uint8' %}
-            item_bytes.append(_write_uint8(it or 0))
-            {% elif f.type[:-2] == 'uint32' %}
-            item_bytes.append(_write_uint32(it or 0))
-            {% elif f.type[:-2] == 'float64' %}
-            item_bytes.append(_write_float64(it or 0.0))
-            {% elif f.type[:-2] == 'string' %}
-            item_bytes.append(_write_string(it or ''))
-            {% endif %}
-            {% else %}
-            item_bytes.append(it.serialize())
-            {% endif %}
-        parts.append(_write_array(item_bytes))
-        {% else %}
-        # nested struct
+        {%- endif %}
+        {%- elif f.type.endswith('[]') %}
+        _arr = self.{{ f.name }} or []
+        {%- set elem = f.type[:-2] %}
+        {%- if elem in primitive_types %}
+        parts.append(_write_array([{% if elem=='int32' %}_write_int32(it or 0){% elif elem=='uint8' %}_write_uint8(it or 0){% elif elem=='uint32' %}_write_uint32(it or 0){% elif elem=='float64' %}_write_float64(it or 0.0){% elif elem=='string' %}_write_string(it or ''){% endif %} for it in _arr]))
+        {%- else %}
+        parts.append(_write_array([it.serialize() for it in _arr]))
+        {%- endif %}
+        {%- else %}
         parts.append(self.{{ f.name }}.serialize() if self.{{ f.name }} is not None else b'')
-        {% endif %}
-        {% endif %}
-        {% endfor %}
+        {%- endif %}
+        {%- endfor %}
         return b''.join(parts)
 
     @classmethod
     def deserialize(cls, b: bytes, offset: int = 0):
         obj = cls()
-        {% for f in t.fields %}
-        {% if f.type == 'int32' %}
+        {%- for f in t.fields %}
+        {%- if f.type in primitive_types %}
+        {%- if f.type == 'int32' %}
         obj.{{ f.name }}, offset = _read_int32(b, offset)
-        {% elif f.type == 'uint8' %}
+        {%- elif f.type == 'uint8' %}
         obj.{{ f.name }}, offset = _read_uint8(b, offset)
-        {% elif f.type == 'uint32' %}
+        {%- elif f.type == 'uint32' %}
         obj.{{ f.name }}, offset = _read_uint32(b, offset)
-        {% elif f.type == 'float64' %}
+        {%- elif f.type == 'float64' %}
         obj.{{ f.name }}, offset = _read_float64(b, offset)
-        {% elif f.type == 'string' %}
+        {%- elif f.type == 'string' %}
         obj.{{ f.name }}, offset = _read_string(b, offset)
-        {% else %}
-        {% if f.type.endswith('[]') %}
-        # array of {{ f.type[:-2] }}
-        {% if f.type[:-2] in primitive_types %}
-        def _item_reader(b2, off2):
-            {% if f.type[:-2] == 'int32' %}
-            return _read_int32(b2, off2)
-            {% elif f.type[:-2] == 'uint8' %}
-            return _read_uint8(b2, off2)
-            {% elif f.type[:-2] == 'uint32' %}
-            return _read_uint32(b2, off2)
-            {% elif f.type[:-2] == 'float64' %}
-            return _read_float64(b2, off2)
-            {% elif f.type[:-2] == 'string' %}
-            return _read_string(b2, off2)
-            {% endif %}
-        obj.{{ f.name }}, offset = _read_array(b, offset, _item_reader)
-        {% else %}
-        # array of structs
-        def _item_reader(b2, off2):
-            return {{ f.type[:-2] }}.deserialize(b2, off2)
-        obj.{{ f.name }}, offset = _read_array(b, offset, _item_reader)
-        {% endif %}
-        {% else %}
-        # nested struct
+        {%- endif %}
+        {%- elif f.type.endswith('[]') %}
+        {%- set elem = f.type[:-2] %}
+        {%- if elem in primitive_types %}
+        def _item_reader_{{ loop.index0 }}(bb, off):
+            {%- if elem == 'int32' %}
+            return _read_int32(bb, off)
+            {%- elif elem == 'uint8' %}
+            return _read_uint8(bb, off)
+            {%- elif elem == 'uint32' %}
+            return _read_uint32(bb, off)
+            {%- elif elem == 'float64' %}
+            return _read_float64(bb, off)
+            {%- elif elem == 'string' %}
+            return _read_string(bb, off)
+            {%- endif %}
+        obj.{{ f.name }}, offset = _read_array(b, offset, _item_reader_{{ loop.index0 }})
+        {%- else %}
+        def _item_reader_{{ loop.index0 }}(bb, off):
+            return {{ elem }}.deserialize(bb, off)
+        obj.{{ f.name }}, offset = _read_array(b, offset, _item_reader_{{ loop.index0 }})
+        {%- endif %}
+        {%- else %}
         obj.{{ f.name }}, offset = {{ f.type }}.deserialize(b, offset)
-        {% endif %}
-        {% endfor %}
+        {%- endif %}
+        {%- endfor %}
         return obj, offset
 
-{% endfor %}
+{%- endfor %}

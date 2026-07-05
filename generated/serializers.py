@@ -1,5 +1,10 @@
+"""
+Auto-generated serializers template (Jinja2)
+"""
 from __future__ import annotations
 import struct
+
+_buf_parts = []
 
 def _write_uint8(v):
     return struct.pack('<B', v)
@@ -35,6 +40,7 @@ def _read_string(b, offset):
     return s, offset+length
 
 def _write_array(items_bytes_list):
+    # items_bytes_list: list of bytes for each item
     out = _write_uint32(len(items_bytes_list))
     for it in items_bytes_list:
         out += it
@@ -47,7 +53,6 @@ def _read_array(b, offset, item_reader):
         item, offset = item_reader(b, offset)
         items.append(item)
     return items, offset
-
 class Person:
     def __init__(self, id: int = None, name: str = None, age: int = None):
         self.id = id
@@ -68,7 +73,6 @@ class Person:
         obj.name, offset = _read_string(b, offset)
         obj.age, offset = _read_uint8(b, offset)
         return obj, offset
-
 class Message:
     def __init__(self, sender: Person = None, text: str = None):
         self.sender = sender

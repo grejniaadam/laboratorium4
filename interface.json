@@ -9,10 +9,27 @@
       ]
     },
     {
+      "name": "Product",
+      "fields": [
+        {"name": "sku", "type": "uint32"},
+        {"name": "title", "type": "string"},
+        {"name": "price", "type": "float64"}
+      ]
+    },
+    {
       "name": "Message",
       "fields": [
         {"name": "sender", "type": "Person"},
         {"name": "text", "type": "string"}
+      ]
+    },
+    {
+      "name": "Order",
+      "fields": [
+        {"name": "order_id", "type": "uint32"},
+        {"name": "product", "type": "Product"},
+        {"name": "quantity", "type": "uint8"},
+        {"name": "notes", "type": "string"}
       ]
     }
   ]

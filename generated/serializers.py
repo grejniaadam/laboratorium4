@@ -73,6 +73,26 @@ class Person:
         obj.name, offset = _read_string(b, offset)
         obj.age, offset = _read_uint8(b, offset)
         return obj, offset
+class Product:
+    def __init__(self, sku: int = None, title: str = None, price: float = None):
+        self.sku = sku
+        self.title = title
+        self.price = price
+
+    def serialize(self) -> bytes:
+        parts = []
+        parts.append(_write_uint32(self.sku or 0))
+        parts.append(_write_string(self.title or ''))
+        parts.append(_write_float64(self.price or 0.0))
+        return b''.join(parts)
+
+    @classmethod
+    def deserialize(cls, b: bytes, offset: int = 0):
+        obj = cls()
+        obj.sku, offset = _read_uint32(b, offset)
+        obj.title, offset = _read_string(b, offset)
+        obj.price, offset = _read_float64(b, offset)
+        return obj, offset
 class Message:
     def __init__(self, sender: Person = None, text: str = None):
         self.sender = sender
@@ -89,4 +109,27 @@ class Message:
         obj = cls()
         obj.sender, offset = Person.deserialize(b, offset)
         obj.text, offset = _read_string(b, offset)
+        return obj, offset
+class Order:
+    def __init__(self, order_id: int = None, product: Product = None, quantity: int = None, notes: str = None):
+        self.order_id = order_id
+        self.product = product
+        self.quantity = quantity
+        self.notes = notes
+
+    def serialize(self) -> bytes:
+        parts = []
+        parts.append(_write_uint32(self.order_id or 0))
+        parts.append(self.product.serialize() if self.product is not None else b'')
+        parts.append(_write_uint8(self.quantity or 0))
+        parts.append(_write_string(self.notes or ''))
+        return b''.join(parts)
+
+    @classmethod
+    def deserialize(cls, b: bytes, offset: int = 0):
+        obj = cls()
+        obj.order_id, offset = _read_uint32(b, offset)
+        obj.product, offset = Product.deserialize(b, offset)
+        obj.quantity, offset = _read_uint8(b, offset)
+        obj.notes, offset = _read_string(b, offset)
         return obj, offset
